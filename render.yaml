@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: nuna-django
+    env: python
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py migrate
+      python create_superuser.py
+    startCommand: gunicorn amr_project.wsgi:application
+    envVars:
+      - key: DATABASE_URL
+        value: postgresql://neondb_owner:npg_AyoMDt4NX2QZ@ep-rough-union-addgw2nk-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: false
+      - key: ALLOWED_HOSTS
+        value: .onrender.com,localhost,127.0.0.1
