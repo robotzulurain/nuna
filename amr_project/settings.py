@@ -82,11 +82,12 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://your-netlify-app.netlify.app",
+    "https://nuna1.netlify.app",
 ]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://nuna1.netlify.app",
 ]
 CORS_ALLOW_ALL_ORIGINS = True  # For development, restrict in production
 
