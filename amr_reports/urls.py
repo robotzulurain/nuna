@@ -1,5 +1,6 @@
 from django.urls import path
 from . import api_real as api
+from . import views  # Import the new views
 
 urlpatterns = [
     # SUMMARY
@@ -15,6 +16,7 @@ urlpatterns = [
     path('options',       api.OptionsView.as_view()),
     path('entry',         api.ManualEntryView.as_view()),
     path('upload',        api.UploadView.as_view()),
+    path('upload/csv',    views.upload_csv, name='upload_csv'),  # ADDED THIS LINE
     path('templates/csv', api.TemplateCSVView.as_view()),
 
     # ALERTS / EXPORT

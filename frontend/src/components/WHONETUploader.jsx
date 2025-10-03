@@ -1,3 +1,4 @@
+import { uploadCSV } from "../api.js";
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
 
@@ -172,7 +173,7 @@ export default function WHONETUploader() {
       const fd = new FormData();
       fd.append("file", blob, (f.name || "upload") + ".converted.csv");
 
-      const res = await fetch("/api/upload/csv", {
+      const res = await fetch("https://nuna-django.onrender.com/api/upload/csv", {
         method: "POST",
         body: fd
       });

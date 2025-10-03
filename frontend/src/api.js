@@ -1,65 +1,48 @@
-// src/api.js — named exports + default api object
+// Base configuration
+const baseURL = "https://nuna-django.onrender.com/api";
 
-const BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "")) || "/api";
-
-async function req(path, { method = "GET", json, formData, params } = {}) {
-  const url = new URL(`${BASE_URL}${path}`, window.location.origin);
-
-  // attach query params (skip blanks/All)
-  if (params && typeof params === "object") {
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== "" && v !== "All") {
-        url.searchParams.set(k, v);
-      }
-    });
+// Helper function for API requests
+async function req(url, options = {}) {
+  const { params, json, formData, ...fetchOpts } = options;
+  let fullURL = baseURL + url;
+  
+  if (params) {
+    const searchParams = new URLSearchParams(params);
+    fullURL += "?" + searchParams.toString();
   }
-
-  const headers = {};
-  let body;
+  
+  const headers = { ...fetchOpts.headers };
+  
   if (json) {
     headers["Content-Type"] = "application/json";
-    body = JSON.stringify(json);
-  } else if (formData) {
-    body = formData; // browser sets boundary
+    fetchOpts.body = JSON.stringify(json);
   }
-
-  const res = await fetch(url.toString(), { method, headers, body });
-  const text = await res.text().catch(() => "");
-  let data = null;
-  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
-
+  
+  if (formData) {
+    fetchOpts.body = formData;
+    // Let browser set Content-Type with boundary for FormData
+  }
+  
+  const res = await fetch(fullURL, { ...fetchOpts, headers });
+  
   if (!res.ok) {
-    const msg =
-      (data && (data.detail || data.error || data.message)) ||
-      text ||
-      `HTTP ${res.status}`;
-    throw new Error(msg);
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
-  return data;
+  
+  return res.json();
 }
 
 // ---- OPTIONS ----
-export const options = async (params) => {
-  const data = await req("/options", { params });
-  return {
-    hosts: (data && data.hosts) || ["HUMAN","ANIMAL","ENVIRONMENT"],
-    environment_types: (data && data.environment_types) || [],
-    animal_species: (data && data.animal_species) || [],
-    ...data,
-  };
-};
+export const options = () => req("/options");
+
 // ---- SUMMARY ----
-export const countsSummary = (params = {}) => req("/summary/counts-summary", { params: buildSummaryParams(params) });
-export const timeTrends     = (params = {}) => req("/summary/time-trends",     { params: buildSummaryParams(params) });
-export const antibiogram    = (params = {}) => req("/summary/antibiogram",     { params: buildSummaryParams(params) });
-export const sexAge         = (params) => req("/summary/sex-age",         { params });
+export const countsSummary = (params) => req("/summary/counts-summary", { params });
+export const timeTrends    = (params) => req("/summary/time-trends",    { params });
+export const antibiogram   = (params) => req("/summary/antibiogram",    { params });
+export const sexAge        = (params) => req("/summary/sex-age",        { params });
 
 // ---- GEO ----
-export const geoFacilities  = (params) => req("/geo/facilities",          { params });
-
-// ---- ALERTS ----
-export const alertsFeed     = (params) => req("/alerts",                  { params });
+export const geoFacilities = (params) => req("/geo/facilities", { params });
 
 // ---- REPORTS ----
 export const reportSummary        = (params) => req("/reports/summary",         { params });
@@ -83,31 +66,11 @@ const api = {
   antibiogram,
   sexAge,
   geoFacilities,
-  alertsFeed,
   reportSummary,
   reportFacilityLeague,
   reportAntibiogram,
   createEntry,
   uploadCSV,
 };
+
 export default api;
-
-
-// === AMR helper: build params for summary endpoints ===
-function buildSummaryParams(input = {}) {
-  const out = {};
-  const set = (k, v) => { if (v != null && v !== "") out[k] = v; };
-
-  // Host + dependent filters
-  set("host_type", input.host_type);
-  if (input.host_type === "ENVIRONMENT") set("environment_type", input.environment_type);
-  if (input.host_type === "ANIMAL")      set("animal_species",   input.animal_species);
-
-  // Pass-through others without overwriting above keys
-  Object.entries(input).forEach(([k, v]) => {
-    if (["host_type","environment_type","animal_species"].includes(k)) return;
-    if (v != null && v !== "" && out[k] == null) out[k] = v;
-  });
-  return out;
-}
-// END_AMR_HELPER

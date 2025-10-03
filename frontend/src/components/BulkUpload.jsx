@@ -1,3 +1,4 @@
+import { uploadCSV } from "../api.js";
 import React, { useRef, useState } from "react";
 
 export default function BulkUpload() {
@@ -14,7 +15,7 @@ export default function BulkUpload() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/upload/csv", { method: "POST", body: fd });
+      const res = await fetch("https://nuna-django.onrender.com/api/upload/csv", { method: "POST", body: fd });
       let data = null;
       try { data = await res.json(); } catch { /* ignore */ }
 
