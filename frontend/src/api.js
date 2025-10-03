@@ -1,35 +1,37 @@
 // Base configuration
-const baseURL = "https://nuna-django.onrender.com/api";
+const BASE_URL = "https://nuna-django.onrender.com/api";
 
-// Helper function for API requests
-async function req(url, options = {}) {
-  const { params, json, formData, ...fetchOpts } = options;
-  let fullURL = baseURL + url;
-  
-  if (params) {
-    const searchParams = new URLSearchParams(params);
-    fullURL += "?" + searchParams.toString();
+async function req(path, { method = "GET", json, formData, params } = {}) {
+  const url = new URL(`${BASE_URL}${path}`);
+
+  // attach query params (skip blanks/All)
+  if (params && typeof params === "object") {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "" && v !== "All") {
+        url.searchParams.set(k, v);
+      }
+    });
   }
-  
-  const headers = { ...fetchOpts.headers };
-  
+
+  const headers = {};
+  let body;
   if (json) {
     headers["Content-Type"] = "application/json";
-    fetchOpts.body = JSON.stringify(json);
+    body = JSON.stringify(json);
+  } else if (formData) {
+    body = formData; // browser sets boundary
   }
-  
-  if (formData) {
-    fetchOpts.body = formData;
-    // Let browser set Content-Type with boundary for FormData
-  }
-  
-  const res = await fetch(fullURL, { ...fetchOpts, headers });
-  
+
+  const res = await fetch(url.toString(), { method, headers, body });
+  const text = await res.text().catch(() => "");
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    throw new Error(data?.error || data?.message || `HTTP ${res.status}: ${res.statusText}`);
   }
-  
-  return res.json();
+
+  return data;
 }
 
 // ---- OPTIONS ----

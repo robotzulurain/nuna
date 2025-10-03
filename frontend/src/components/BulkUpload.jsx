@@ -1,73 +1,34 @@
+import { useState } from "react";
 import { uploadCSV } from "../api.js";
-import React, { useRef, useState } from "react";
 
-export default function BulkUpload() {
-  const inputRef = useRef(null);
-  const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState(null);
+export default function BulkUpload({ onUpload }) {
+  const [uploading, setUploading] = useState(false);
+  const [message, setMessage] = useState("");
 
-  async function onFile(e) {
-    const file = e.target.files?.[0];
+  const handleUpload = async (file) => {
     if (!file) return;
-    setBusy(true);
-    setNote(null);
-
+    setUploading(true);
+    setMessage("");
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("https://nuna-django.onrender.com/api/upload/csv", { method: "POST", body: fd });
-      let data = null;
-      try { data = await res.json(); } catch { /* ignore */ }
-
-      if (!res.ok) {
-        const friendly = (data && (data.detail || data.error || data.message)) ||
-          "Upload failed.";
-        const details = (data && data.details) ? `\nDetails: ${data.details}` : "";
-        throw new Error(friendly + details);
-      }
-
-      const created = data?.created ?? 0;
-      const errs = data?.errors ?? [];
-      if (errs.length) {
-        setNote({
-          kind: "warn",
-          text: `Uploaded ${created}. ${errs.length} row(s) had issues:\n- ` + errs.slice(0,10).join("\n- ")
-        });
-      } else {
-        setNote({ kind: "ok", text: `Uploaded ${created} row(s) successfully.` });
-      }
+      const result = await uploadCSV(file);
+      setMessage(`Upload successful! ${result.row_count} rows processed.`);
+      onUpload?.(result);
     } catch (err) {
-      setNote({ kind: "error", text: String(err?.message || err) });
+      setMessage(`Upload failed: ${err.message}`);
     } finally {
-      setBusy(false);
-      if (inputRef.current) inputRef.current.value = "";
+      setUploading(false);
     }
-  }
+  };
 
   return (
-    <div className="mt-2">
-      <label className="block font-medium mb-1">Bulk Upload (CSV/XLSX)</label>
+    <div>
       <input
-        ref={inputRef}
         type="file"
-        accept=".csv,.xlsx,.xls"
-        onChange={onFile}
-        disabled={busy}
+        accept=".csv"
+        onChange={(e) => handleUpload(e.target.files[0])}
+        disabled={uploading}
       />
-      <div className="text-xs text-gray-600 mt-1">
-        Parsed on the server (handles Windows/Mac newlines, quotes, embedded commas/newlines, and XLSX).
-      </div>
-      {note && (
-        <pre
-          style={{ whiteSpace: "pre-wrap" }}
-          className={
-            "mt-2 p-2 rounded border " +
-            (note.kind === "ok" ? "bg-green-50 border-green-300"
-              : note.kind === "warn" ? "bg-yellow-50 border-yellow-300"
-              : "bg-red-50 border-red-300")
-          }
-        >{note.text}</pre>
-      )}
+      {message && <p>{message}</p>}
     </div>
   );
 }
